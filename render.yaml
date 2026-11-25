@@ -1,22 +1,26 @@
+# Exported from Render on 2026-11-24T11:10:20Z
+version: "1"
 services:
   - type: web
     name: reservations-api
     runtime: docker
+    repo: https://github.com/Crista-Desuraune/projet-depart
     plan: free
-    region: frankfurt
-    branch: main
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /health
-    autoDeployTrigger: "off"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: reservations-db
           property: connectionString
-
+    region: frankfurt
+    healthCheckPath: /health
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    autoDeployTrigger: "off"
 databases:
   - name: reservations-db
+    databaseName: reservations_db_faq0
+    user: reservations_db_faq0_user
     plan: free
     region: frankfurt
-    postgresMajorVersion: "16"
     ipAllowList: []
+    postgresMajorVersion: "16"

@@ -1,7 +1,7 @@
 import {
-  BadRequestException, Body, ConflictException, Controller, Delete, Get,
-  HttpCode, Module, NotFoundException, Param, ParseIntPipe, Post,
-  ServiceUnavailableException,
+  BadRequestException, Body, CanActivate, ConflictException, Controller, Delete, Get,
+  HttpCode, Injectable, Module, NotFoundException, Param, ParseIntPipe, Post,
+  ServiceUnavailableException, UseGuards,
 } from '@nestjs/common'
 import { Database } from './database'
 import { lireCreneau, seChevauchent } from './regles'
@@ -12,6 +12,14 @@ function verifierIdentifiant(id: unknown): asserts id is number {
   }
 }
 
+@Injectable()
+class AccesOuvertGuard implements CanActivate {
+  canActivate(): boolean {
+    return true
+  }
+}
+
+@UseGuards(AccesOuvertGuard)
 @Controller()
 export class Api {
   constructor(private readonly db: Database) {}
@@ -70,14 +78,14 @@ export class Api {
       const salle = await client.query('SELECT id FROM salles WHERE id = $1 FOR UPDATE', [salleId])
       if (!salle.rowCount) throw new NotFoundException('Salle introuvable')
       const reservations = await client.query<{ debut: Date, fin: Date }>(
-        'SELECT debut, fin FROM reservations WHERE salle_id = $1', [salleId],
+          'SELECT debut, fin FROM reservations WHERE salle_id = $1', [salleId],
       )
       if (reservations.rows.some(reservation => seChevauchent(reservation, creneau))) {
         throw new ConflictException('Cette salle est déjà réservée sur ce créneau')
       }
       const resultat = await client.query(
-        'INSERT INTO reservations (salle_id, debut, fin) VALUES ($1, $2, $3) RETURNING *',
-        [salleId, creneau.debut, creneau.fin],
+          'INSERT INTO reservations (salle_id, debut, fin) VALUES ($1, $2, $3) RETURNING *',
+          [salleId, creneau.debut, creneau.fin],
       )
       await client.query('COMMIT')
       return resultat.rows[0]
