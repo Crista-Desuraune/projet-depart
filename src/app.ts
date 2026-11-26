@@ -1,10 +1,11 @@
 import {
   BadRequestException, Body, CanActivate, ConflictException, Controller, Delete, Get,
   HttpCode, Injectable, Module, NotFoundException, Param, ParseIntPipe, Post,
-  ServiceUnavailableException, UseGuards,
+  ServiceUnavailableException, UseGuards, Query
 } from '@nestjs/common'
 import { Database } from './database'
-import { lireCreneau, seChevauchent } from './regles'
+import { lireCreneau, seChevauchent, filtrerSallesDisponibles } from './regles'
+import { ConfigModule } from '@nestjs/config'
 
 function verifierIdentifiant(id: unknown): asserts id is number {
   if (typeof id !== 'number' || !Number.isInteger(id) || id < 1 || id > 2147483647) {
@@ -23,6 +24,18 @@ class AccesOuvertGuard implements CanActivate {
 @Controller()
 export class Api {
   constructor(private readonly db: Database) {}
+
+  @Get('salles/disponibles')
+  async sallesDisponibles(@Query('debut') debut: unknown, @Query('fin') fin: unknown) {
+    const creneau = lireCreneau(debut, fin)
+    const salles = (await this.db.pool.query<{ id: number, nom: string }>(
+        'SELECT id, nom FROM salles ORDER BY id',
+    )).rows
+    const reservations = (await this.db.pool.query<{ salle_id: number, debut: Date, fin: Date }>(
+        'SELECT salle_id, debut, fin FROM reservations',
+    )).rows
+    return filtrerSallesDisponibles(salles, reservations, creneau)
+  }
 
   @Get('health')
   async sante() {
@@ -106,5 +119,6 @@ export class Api {
   }
 }
 
-@Module({ controllers: [Api], providers: [Database] })
+@Module({ imports: [ConfigModule.forRoot({ isGlobal: true })], controllers: [Api], providers: [Database] })
+
 export class AppModule {}
