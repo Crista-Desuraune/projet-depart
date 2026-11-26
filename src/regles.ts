@@ -28,3 +28,13 @@ export function seChevauchent(
 ) {
   return premier.debut < second.fin && second.debut < premier.fin
 }
+
+export function filtrerSallesDisponibles(
+    salles: { id: number, nom: string }[],
+    reservations: { salle_id: number, debut: Date, fin: Date }[],
+    creneau: { debut: Date, fin: Date },
+) {
+  return salles.filter((salle) => !reservations.some(
+      (reservation) => reservation.salle_id === salle.id && seChevauchent(reservation, creneau),
+  ))
+}
